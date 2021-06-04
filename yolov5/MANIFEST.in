@@ -1,0 +1,5 @@
+include *.py *.md *.pt *.yaml
+recursive-include models *.py
+recursive-include utils *.py *.sh *yaml
+recursive-include weights *.sh
+
