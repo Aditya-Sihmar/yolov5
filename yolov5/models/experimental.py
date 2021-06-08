@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from yolov5.models.common import Conv, DWConv
-from yolov5.utils.google_utils import attempt_download
+from models.common import Conv, DWConv
+from utils.google_utils import attempt_download
 
 
 class CrossConv(nn.Module):
@@ -111,13 +111,12 @@ class Ensemble(nn.ModuleList):
 
 
 def attempt_load(weights, map_location=None, inplace=True):
-    from yolov5.models.yolo import Detect, Model
+    from models.yolo import Detect, Model
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
     for w in weights if isinstance(weights, list) else [weights]:
-        attempt_download(w)
-        ckpt = torch.load(w, map_location=map_location)  # load
+        ckpt = torch.load(attempt_download(w), map_location=map_location)  # load
         model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
 
     # Compatibility updates
@@ -130,7 +129,8 @@ def attempt_load(weights, map_location=None, inplace=True):
     if len(model) == 1:
         return model[-1]  # return model
     else:
-        print('Ensemble created with %s\n' % weights)
-        for k in ['names', 'stride']:
+        print(f'Ensemble created with {weights}\n')
+        for k in ['names']:
             setattr(model, k, getattr(model[-1], k))
+        model.stride = model[torch.argmax(torch.tensor([m.stride.max() for m in model])).int()].stride  # max stride
         return model  # return ensemble
